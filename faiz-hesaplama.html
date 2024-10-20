@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faiz Hesaplama Oyunu</title>
+    <style>
+        /* Temel stil tanımları */
+        .badge {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background-color: gold;
+            border-radius: 50%;
+            margin: 5px;
+        }
+        #leaderboard {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Basit ve Bileşik Faiz Hesaplama Oyunu</h1>
+
+<!-- Rozetler -->
+<div>
+    <h3>Rozetler:</h3>
+    <div id="badges">
+        <!-- Başlangıçta hiç rozet yok, puanla rozet kazanılacak -->
+    </div>
+</div>
+
+<!-- Soru ve Cevap Bölümü -->
+<h2>Soru:</h2>
+<p id="questionText">Soru burada görünecek</p>
+
+<input type="number" id="answer" placeholder="Cevap giriniz">
+<button onclick="checkAnswer()">Cevabı Kontrol Et</button>
+
+<p id="feedback"></p>
+
+<!-- Oyuncu İsmi Girişi -->
+<h3>Oyuncu Adı:</h3>
+<input type="text" id="playerName" placeholder="İsminizi Girin">
+<button onclick="submitScore()">Puanı Kaydet</button>
+
+<!-- Liderlik Panosu -->
+<div id="leaderboard">
+    <h3>Liderlik Panosu</h3>
+    <ul id="leaderboardList"></ul>
+</div>
+
+<script>
+    let badges = 0;  // Başlangıçta hiç rozet yok
+    let score = 0;   // Oyuncu puanı
+    let pointsForNextBadge = 50;  // Rozet kazanmak için gereken puan eşiği
+    let correctAnswer = 0;  // Doğru cevap
+    let currentQuestionType = '';  // Şu anki soru tipi (basit/bileşik faiz)
+
+    // Rastgele soru oluşturma fonksiyonu
+    function generateQuestion() {
+        let principal = Math.floor(Math.random() * 10000) + 1000;  // Ana para (1000 ile 10000 TL arası)
+        let rate = Math.floor(Math.random() * 20) + 1;  // Faiz oranı (%1 ile %20 arası tam sayı)
+        let time = Math.floor(Math.random() * 10) + 1;  // Zaman (1 ile 10 yıl arası tam sayı)
+        let questionType = Math.random() > 0.5 ? 'basit' : 'bileşik';  // Soru tipi: basit veya bileşik
+
+        if (questionType === 'basit') {
+            currentQuestionType = 'basit';
+            let futureOrPresent = Math.random() > 0.5 ? 'gelecek' : 'bugünkü';  // Gelecek veya bugünkü değer
+            if (futureOrPresent === 'gelecek') {
+                document.getElementById('questionText').innerText = `${principal} TL'yi %${rate} faiz oranı ile ${time} yıl yatırırsanız basit faizle gelecekteki değer (GD) ne olur? Formül: GD = BD * (1 + i)`;
+                correctAnswer = principal * (1 + (rate / 100) * time);  // Basit faiz gelecekteki değer
+            } else {
+                let futureValue = principal * (1 + (rate / 100) * time);  // Hesaplanmış gelecek değer
+                document.getElementById('questionText').innerText = `Gelecekte ${futureValue.toFixed(0)} TL elde etmek için bugünkü değer (BD) ne olmalı? %${rate} faiz oranı ve ${time} yıl süresi ile. Formül: BD = GD / (1 + i)`;
+                correctAnswer = futureValue / (1 + (rate / 100) * time);  // Basit faiz bugünkü değer
+            }
+        } else {
+            currentQuestionType = 'bileşik';
+            let futureOrPresent = Math.random() > 0.5 ? 'gelecek' : 'bugünkü';  // Gelecek veya bugünkü değer
+            if (futureOrPresent === 'gelecek') {
+                document.getElementById('questionText').innerText = `${principal} TL'yi %${rate} faiz oranı ile bileşik faizle ${time} yıl yatırırsanız gelecekteki değer (GD) ne olur? Formül: GD_n = BD * (1 + i)^n`;
+                correctAnswer = principal * Math.pow((1 + rate / 100), time);  // Bileşik faiz gelecekteki değer
+            } else {
+                let futureValue = principal * Math.pow((1 + rate / 100), time);  // Hesaplanmış gelecek değer
+                document.getElementById('questionText').innerText = `Gelecekte ${futureValue.toFixed(0)} TL elde etmek için bugünkü değer (BD) ne olmalı? %${rate} faiz oranı ve ${time} yıl süresi ile. Formül: BD = GD_n / (1 + i)^n`;
+                correctAnswer = futureValue / Math.pow((1 + rate / 100), time);  // Bileşik faiz bugünkü değer
+            }
+        }
+    }
+
+    // Cevabı kontrol etme fonksiyonu
+    function checkAnswer() {
+        let answer = document.getElementById('answer').value;
+        if (Math.abs(answer - correctAnswer) < 1) {  // Yaklaşık doğru kabul ediyoruz
+            document.getElementById('feedback').innerText = "Doğru cevap!";
+            score += 10;  // Doğru cevap için 10 puan
+            checkForBadge();  // Rozet kazanma kontrolü
+        } else {
+            document.getElementById('feedback').innerText = "Yanlış cevap! Doğru cevap: " + correctAnswer.toFixed(0);
+        }
+        generateQuestion();  // Yeni soru oluştur
+    }
+
+    // Rozet kazanma kontrolü
+    function checkForBadge() {
+        if (score >= pointsForNextBadge) {
+            badges++;  // Rozet kazan
+            pointsForNextBadge += 50;  // Bir sonraki rozet için gereken puanı artır
+            addBadge();  // Rozeti ekranda göster
+        }
+    }
+
+    // Yeni rozet ekleme fonksiyonu
+    function addBadge() {
+        let badgeElement = document.createElement('div');
+        badgeElement.classList.add('badge');
+        document.getElementById('badges').appendChild(badgeElement);
+    }
+
+    // Puanı kaydet ve liderlik panosuna ekle
+    function submitScore() {
+        let playerName = document.getElementById('playerName').value;
+        if (!playerName) {
+            alert("Lütfen isminizi girin!");
+            return;
+        }
+
+        // Puanı Local Storage'a kaydet
+        let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+        leaderboard.push({ name: playerName, score: score });
+        leaderboard.sort((a, b) => b.score - a.score);  // Puan sırasına göre listele
+        localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+
+        // Liderlik panosunu güncelle
+        displayLeaderboard();
+    }
+
+    // Liderlik panosunu gösterme fonksiyonu
+    function displayLeaderboard() {
+        let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+        let leaderboardList = document.getElementById('leaderboardList');
+        leaderboardList.innerHTML = '';
+
+        leaderboard.forEach((player) => {
+            let listItem = document.createElement('li');
+            listItem.innerText = `${player.name}: ${player.score} puan`;
+            leaderboardList.appendChild(listItem);
+        });
+    }
+
+    // Sayfa yüklendiğinde liderlik panosunu göster ve ilk soruyu oluştur
+    window.onload = function() {
+        displayLeaderboard();
+        generateQuestion();  // İlk soru oluştur
+    };
+
+</script>
+
+</body>
+</html>
